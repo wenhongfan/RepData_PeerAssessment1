@@ -1,0 +1,101 @@
+Reproducible Research Assignment 1
+=========================
+##Loading and preprocessing the data
+
+```{r}
+setwd("C:/Users/James Fan/Desktop/Courera_DA/Reproducible/proj1")
+data =read.csv("activity.csv")
+library(ggplot2)
+```
+##What is mean total number of steps taken per day?
+
+Here is the histogram of the total number of steps taken each day
+```{r}
+ggplot(data, aes(x=factor(date), y=steps)) + stat_summary(fun.y="sum", geom="bar")
+```
+```{r}
+subtotal <- aggregate(data$steps, list(daily_total=data$date), sum)
+```
+The mean for total numbers of steps taken per day is:
+```{r}
+mean(subtotal[,2], na.rm=TRUE)
+```
+The median for total numbers of steps taken per day is
+```{r}
+median(subtotal[,2], na.rm=TRUE)
+```
+
+##What is the average daily activity pattern?
+The pattern below seem reflect a person's daily activity pattern
+```{r}
+subtotal1 <- aggregate(data$steps,list(interval=data$interval),
+                       FUN=c("mean"),na.rm=TRUE) 
+plot(subtotal1$interval,subtotal1$x,  type="l", xlab="interval", 
+     ylab="average steps taken per day", 
+     main="Avg Steps Taken for each 5 min interval during a day")
+```
+
+The 5-minute interval that contains the maximum number of steps is interval #:
+```{r}
+subtotal1[which.max(subtotal1[,2]),1]
+```
+
+##Imputing missing values
+```{r}
+idx <- is.na(data$steps)
+sum(idx)
+```
+
+Impute using the mean/median for that day, or the mean for that 5-minute interval
+```{r}
+impute_na <- function(data) {
+   for (i in 1:dim(data)[1]) {
+      if (is.na(data$steps[i])) {      
+            data$steps[i] <- median(data[data$interval==data$interval[i],"steps"],na.rm=TRUE)
+         }
+      }
+   return(data)
+}
+```
+
+Call impute_na function to generate new data
+```{r}
+newdata=impute_na(data) 
+```
+generate histogram using imputed data
+```{r}
+ggplot(newdata, aes(x=factor(date), y=steps)) + stat_summary(fun.y="sum", geom="bar")
+```
+
+
+```{r}
+subtotal1 <- aggregate(newdata$steps, list(daily_total=newdata$date), sum)
+```
+The mean for total numbers of steps taken per day is:
+```{r}
+mean(subtotal1[,2], na.rm=TRUE)
+```
+The median for total numbers of steps taken per day is
+```{r}
+median(subtotal1[,2], na.rm=TRUE)
+```
+Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+
+After imputing the NA using median of the same 5 min intervals from other days, the mean for 
+toal number of steps decreases from 10766 to 9503; the median for total number of steps decreases
+a bit from  10765 changes to 10395
+
+
+##Are there differences in activity patterns between weekdays and weekends?
+newdata$wkday="weekday"
+newdata$wkday[weekdays(as.Date(newdata$date)) %in% c('Saturday','Sunday')] <-"weekend"
+as.factor(newdata$wkday)
+
+par(mfrow=c(2,1)) 
+plot(newdata$interval[newdata$wkday=="weekday"], 
+      newdata$steps[newdata$wkday=="weekday"], type='l',xlab='', ylab='',
+      main="Weekday")
+
+plot(newdata$interval[newdata$wkday=="weekend"], 
+      newdata$steps[newdata$wkday=="weekend"], type='l', xlab='interval', ylab='steps',
+      main="Weekend")
